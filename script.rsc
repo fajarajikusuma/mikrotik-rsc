@@ -12,13 +12,15 @@
     /ip firewall filter add chain=forward src-address=192.168.2.0/24 out-interface=pppoe-idPlay action=drop comment="default-fw"
 }
 
-# === Cek Netwatch dulu sebelum add ===
-:local nwFind [/tool netwatch find where host="192.168.5.3"]
-
-:if ([:len $nwFind] = 0) do={
-    /tool netwatch add host=192.168.5.3 interval=00:00:09 \
-        up-script="/ip firewall filter disable [find comment=default-fw]" \
-        down-script="/ip firewall filter enable [find comment=default-fw]"
+# === Jalankan aksi berdasarkan status Netwatch ===
+:local nwID [/tool netwatch find where host="192.168.5.3"]
+:if ([:len $nwID] > 0) do={
+    :local status [/tool netwatch get $nwID status]
+    :if ($status = "up") do={
+        /ip firewall filter disable [find comment="default-fw"]
+    } else={
+        /ip firewall filter enable [find comment="default-fw"]
+    }
 }
 
 # === Jalankan aksi berdasarkan status Netwatch ===
