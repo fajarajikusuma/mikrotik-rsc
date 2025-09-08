@@ -13,7 +13,7 @@
 }
 
 # === Jalankan aksi berdasarkan status Netwatch ===
-:local nwID [/tool netwatch find where host="192.168.5.3"]
+:local nwID [/tool netwatch find where host="192.168.4.3"]
 :if ([:len $nwID] > 0) do={
     :local status [/tool netwatch get $nwID status]
     :if ($status = "up") do={
@@ -24,7 +24,7 @@
 }
 
 # === Jalankan aksi berdasarkan status Netwatch ===
-:if ([/tool netwatch get [find host="192.168.5.3"] status] = "up") do={
+:if ([/tool netwatch get [find host="192.168.4.3"] status] = "up") do={
    /ip firewall filter disable [find comment="default-fw"]
 } else={
    /ip firewall filter enable [find comment="default-fw"]
