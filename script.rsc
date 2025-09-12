@@ -1,13 +1,13 @@
 # ================================
-# Auto Firewall by Aji
+# Auto Firewall by Aji (fixed)
 # ================================
 
-:local findRule [/ip firewall filter find where chain=forward src-address="192.168.5.0/24" in-interface="ether3-LAN" action="drop"]
+:local findRule [/ip firewall filter find where chain=forward src-address="192.168.5.0/24" in-interface="ether3-LAN" action=drop]
 :if ([:len $findRule] = 0) do={
     /ip firewall filter add chain=forward src-address=192.168.5.0/24 in-interface=ether3-LAN action=drop comment="default-fw"
 }
 
-:local findRule [/ip firewall filter find where chain=forward src-address="192.168.2.0/24" in-interface="ether3-LAN" action="drop"]
+:local findRule [/ip firewall filter find where chain=forward src-address="192.168.2.0/24" in-interface=ether3-LAN" action=drop]
 :if ([:len $findRule] = 0) do={
     /ip firewall filter add chain=forward src-address=192.168.2.0/24 in-interface=ether3-LAN action=drop comment="default-fw"
 }
@@ -21,13 +21,6 @@
     } else={
         /ip firewall filter enable [find comment="default-fw"]
     }
-}
-
-# === Jalankan aksi berdasarkan status Netwatch ===
-:if ([/tool netwatch get [find host="192.168.5.3"] status] = "up") do={
-   /ip firewall filter disable [find comment="default-fw"]
-} else={
-   /ip firewall filter enable [find comment="default-fw"]
 }
 
 # === Cek User 'aji' ===
