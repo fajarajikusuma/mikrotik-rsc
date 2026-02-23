@@ -1,13 +1,13 @@
 # === Firewall subnet 192.168.5.0/24 ===
-:local findRule1 [/ip firewall filter find where chain=forward src-address="192.168.5.0/24" in-interface="bridge-LAN" action="drop"]
+:local findRule1 [/ip firewall filter find where chain=forward src-address="192.168.5.0/24" in-interface="ether3-LAN" action="drop"]
 :if ([:len $findRule1] = 0) do={
-    /ip firewall filter add chain=forward src-address=192.168.5.0/24 in-interface=bridge-LAN action=drop comment="default-fw"
+    /ip firewall filter add chain=forward src-address=192.168.5.0/24 in-interface=ether3-LAN action=drop comment="default-fw"
 }
 
 # === Firewall subnet 192.168.2.0/24 ===
-:local findRule2 [/ip firewall filter find where chain=forward src-address="192.168.2.0/24" in-interface="bridge-LAN" action="drop"]
+:local findRule2 [/ip firewall filter find where chain=forward src-address="192.168.2.0/24" in-interface="ether3-LAN" action="drop"]
 :if ([:len $findRule2] = 0) do={
-    /ip firewall filter add chain=forward src-address=192.168.2.0/24 in-interface=bridge-LAN action=drop comment="default-fw"
+    /ip firewall filter add chain=forward src-address=192.168.2.0/24 in-interface=ether3-LAN action=drop comment="default-fw"
 }
 
 # === Netwatch logic ===
