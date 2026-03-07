@@ -1,44 +1,57 @@
-# 1. Ambil Jam dan Tanggal
+# === 1. Ambil Waktu & Tanggal ===
 :local time [/system clock get time]
 :local date [/system clock get date]
-
-# 2. Logika Hitung Hari (0=Min, 1=Sen, 2=Sel, 3=Rab, 4=Kam, 5=Jum, 6=Sab)
-# Menghasilkan angka 0-6 terlepas dari format tanggal router
-:local datePtr [/system clock get date]
-:local dayCount ([/system clock get date] -> "day")
-:local monthCount ([/system clock get date] -> "month")
-:local yearCount ([/system clock get date] -> "year")
-
-# Menggunakan fitur internal RouterOS untuk mendapatkan nama hari (v6.43+)
-:local dayname [:pick [/system clock get date] 0 3]
-# Jika format Anda yyyy-mm-dd, kita gunakan deteksi alternatif:
-:local isFriday false
 :local isWeekend false
 
-# Deteksi Jumat (Fri)
-:if ($date ~ "fri" || $date ~ "-05" || [/system clock get gmt-offset] = "friday") do={ :set isFriday true }
-# Karena RouterOS Anda pakai yyyy-mm-dd, mari gunakan cara paling pasti:
-:local dayNum [:pick $date 8 10]
+# === 2. Logika Deteksi Hari Otomatis (Zeller's Congruence Lite) ===
+# Script ini menghitung hari tanpa peduli format yyyy-mm-dd atau mmm/dd/yyyy
+:local y [:pick $date 0 4]
+:local m [:pick $date 5 7]
+:local d [:pick $date 8 10]
 
-# --- PERBAIKAN LOGIKA TOTAL ---
-# Kita gunakan pengecekan string yang lebih luas
-:if ($date ~ "sat" || $date ~ "sun") do={ :set isWeekend true }
+# Koreksi jika format ternyata mmm/dd/yyyy (untuk jaga-jaga)
+:if ([:pic $date 4 5] != "-") do={
+    :set y [:pick $date 7 11]
+    :local months {"jan"=1;"feb"=2;"mar"=3;"apr"=4;"may"=5;"jun"=6;"jul"=7;"aug"=8;"sep"=9;"oct"=10;"nov"=11;"dec"=12}
+    :set m ($months->[:pick $date 0 3])
+    :set d [:pick $date 4 6]
+}
 
-# KHUSUS JUMAT SORE: Jika jam >= 16:00
-:if (($date ~ "fri" || $date ~ "06") && $time >= 16:00:00) do={
+# Algoritma menentukan hari (0=Minggu, 1=Senin, ..., 5=Jumat, 6=Sabtu)
+:local a ((14 - $m) / 12)
+:local yr ($y - $a)
+:local mr ($m + 12 * $a - 2)
+:local dayOfWeek (($d + $yr + $yr / 4 - $yr / 100 + $yr / 400 + (31 * $mr) / 12) % 7)
+
+# === 3. Penentuan Status Weekend ===
+# dayOfWeek 6 = Sabtu, 0 = Minggu
+:if ($dayOfWeek = 6 || $dayOfWeek = 0) do={
     :set isWeekend true
 }
 
-# 3. Eksekusi
+# Khusus Jumat (dayOfWeek 5) setelah jam 16:00
+:if ($dayOfWeek = 5 && $time >= 16:00:00) do={
+    :set isWeekend true
+}
+
+# === 4. Eksekusi ===
 :if ($isWeekend = true) do={
     /ip firewall filter disable [find comment="default-fw"]
-    :log warning "SISTEM: Weekend/Jumat Sore detected. Firewall OFF."
+    :log warning "SISTEM: Mode Weekend Otomatis - Firewall OFF"
 } else={
-    # Logika Netwatch Normal (Senin - Jumat Siang)
-    :local status [/tool netwatch get [find host="192.168.4.2"] status]
-    :if ($status = "up") do={
-        /ip firewall filter disable [find comment="default-fw"]
-    } else={
-        /ip firewall filter enable [find comment="default-fw"]
+    # Logika Netwatch (Senin - Jumat Siang)
+    :local nwID [/tool netwatch find where host="192.168.4.2"]
+    :if ([:len $nwID] > 0) do={
+        :local status [/tool netwatch get $nwID status]
+        :if ($status = "up") do={
+            /ip firewall filter disable [find comment="default-fw"]
+        } else={
+            # Pastikan rule ada
+            :if ([:len [/ip firewall filter find where comment="default-fw"]] = 0) do={
+                /ip firewall filter add chain=forward src-address=192.168.5.0/24 in-interface=ether3-LAN action=drop comment="default-fw"
+                /ip firewall filter add chain=forward src-address=192.168.2.0/24 in-interface=ether3-LAN action=drop comment="default-fw"
+            }
+            /ip firewall filter enable [find comment="default-fw"]
+        }
     }
 }
